@@ -1,0 +1,295 @@
+---
+title: "Non-hierachical-organization-simulation"
+author: "Christoffer Lundbak Olesen"
+date: "3/19/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries}
+library(tidyverse)
+library(ggplot2)
+```
+
+FUNCTIONS
+The variables in the functions and what they represent are:
+nA = number of agents
+nP = number of projects
+nR = number of rounds
+```{r Functions}
+
+# CREATE NETWORK FUNCTION
+# Function that returns a matrix as an edge list. Row number represents each agent and column 1 and 2 represent the neighbors of each agent. 
+createNetwork = function(nA){
+  
+  #Create an empty matrix with 3 columns ans as many rows as number of agents
+  agentNetwork = matrix(ncol = 2, nrow = nA)
+  
+  #Loop through all agents
+  for (a in 1:nA){
+    
+    # If its the first agent, make an edge to the last and the second agent
+    if (a == 1){
+      edge1 = nA
+      edge2 = 2
+    }
+    
+    # If its the last agent, make an edge to the last-1 and the first agent
+    if (a == nA){
+      edge1 = a-1
+      edge2 = 1
+    }
+    
+    # If its any agent between 2 and the last-1, make an edge to the agents one lower and the agent one higher
+    if(a %in% 2:(nA-1)){
+      edge1 = a-1
+      edge2 = a+1
+    }
+    
+    # save the data into the matrix
+    agentNetwork[a,1] = edge1
+    agentNetwork[a,2] = edge2
+  }
+  
+  return(agentNetwork)
+}
+
+
+# CREATE PROJECTS FUNCTION
+# Function that returns a vector representing the number of tasks in each project
+createProjects = function(nA, nP, nR){
+  tasks = nA*nR/nP # formula for the number of tasks
+  projectList = c(rep(tasks,nP)) # repeat the number of tasks nP times and make it into a vector
+  
+  return(projectList)
+}
+
+
+# CREATE AGENTS' EXPECTATIONS FUNCTION
+# Function that returns a matrix with starting values of expectations. Each row is an agent and each column is a project.
+createExpectations = function(nA, nP){
+  
+  # Prepare an empty matrix
+  expMatrix = matrix(ncol = nP, nrow = nA) 
+  
+  # Loop through agents and loop through projects and insert a number on the agent,project place in the matrix
+  for(a in 1:nA){
+    for(p in 1:nP){
+      expMatrix[a,p] = runif(1) # Random number between 0 and 1 drawn from a uniform distribution
+    }
+  }
+  return(expMatrix)
+}
+
+
+# SIMULATION FUNCTION
+# Function that runs the simulation an returns a data frame.
+simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta){
+  
+  # Use other functions to set up the simulation
+  network = createNetwork(nA)
+  projects = createProjects(nA, nP, nR)
+  expectations = createExpectations(nA, nP)
+  nTasks = projects[1]
+  
+  #prepare a list for storing the data of each round
+  data_list = list()
+  i = 1
+  
+  #Loop through each round
+  for (round in 1:nR){
+    
+    #set up a vector for how many works on each project this round (same structure as the projects vector)
+    work = c(rep(0,nP))
+    
+    # Empty vector for putting in the choices of the agents. (the structure will be: value n = choice of agent n)
+    projectChoice = c()
+    
+    # CHOOSE PROJECT
+    # Loop through agents
+    for (a in 1:nA){
+      
+      # Find the project with the highest expectation
+      proj =  which.max(expectations[a,])#which.max returns the placement of a number in a vector
+      
+      #add one to the project in "work" and store the choice in "projectChoice"
+      work[proj] = work[proj] + 1
+      projectChoice[a] = proj
+    }
+    
+    # REWARDS
+    # Calculate reward per project
+    rewards = c(rep(0,nP)) # Empty vector for total rewards per project
+    maxOpt = nA/nP # Maximum number of agentes working a project in order to get the optimal (1) reward per agent
+    
+    # loop through projects and calculate amount of total rewards based on the amount of agents working each project
+    for (p in 1:nP){
+      
+      # if the number of agents working the project is less or equal to maxOpt, put this number on the total amount of reward for this project. Else, use the function to calculate it.
+      if (work[p] <= maxOpt){ 
+        rewards[p] = work[p]
+      } else {
+        # Function for calculating total amount of rewards.
+        # rewardExp is the exponent defined outside the simulation.
+        # (work[p]-maxOpt+1) is just the number of agents above maxOpt + 1 (to make the exponent work from the first agent above maxOpt)
+        # the minus 1 in the end is add to shift it down to the intercept
+        rewards[p] = maxOpt + (work[p]-maxOpt+1)^rewardExp-1 
+      }
+      
+      #if the number of tasks left is lower than a percentage (defined outside the simulation) of the max amount of tasks, then calculate a modifier and apply it to the total amount of rewards.
+      if (projects[p] < nTasks*taskThresh){
+        percentageLeft = projects[p] / nTasks # How much work is left
+        modifier = percentageLeft/taskThresh # percentage left since the threshold as a modifier
+        rewards[p] = rewards[p] * modifier # Apply the modifier
+      }
+    }
+    
+    #calculate reward per agent
+    # for each agent, divide the total number of reward on the chosen project and divide it with the amount of agents who worked that project and store it as this agents reward in a vector.
+    agentReward = c() 
+    for (a in 1:nA){
+      p = projectChoice[a]
+      agentReward[a] = rewards[p]/work[p]
+    }
+    
+    #UPDATE EXPECTAIONS
+    # new exp = alpha * reward + (1 - alpha) * exp ... (IS THIS RIGHT???)
+    # loop through agents and calculate new expextation for the project they chose and replace it with the old one
+    for (a in 1:nA){
+      p = projectChoice[a] 
+      newExp = alpha * agentReward[a] + (1-alpha) * expectations[a,p]
+      expectations[a,p] = newExp
+    }
+    
+    # Loop through agents and check if the naighbors (egdes in the network) chose a different project. If they did update this project as well using the method above (but with beta instead of alpha)
+    for (a in 1:nA){
+      n1 = network[a,1]
+      n2 = network[a,2]
+      
+      if (projectChoice[a] != projectChoice[n1]){
+        p = projectChoice[n1] 
+        newExp = beta * agentReward[n1] + (1-beta) * expectations[a,p]
+        expectations[a,p] = newExp
+      }
+      
+      if (projectChoice[a] != projectChoice[n2]){
+        p = projectChoice[n2] 
+        newExp = beta * agentReward[n2] + (1-beta) * expectations[a,p]
+        expectations[a,p] = newExp
+      }
+    }
+    
+    #update projects (should this come before or after calculation of reward?)
+    projects = projects - work # just subtracts the amount of work on each project with the amount of work left on each project.
+    for (p in projects){
+      if (p < 0){
+        projects[p] = 0
+        }
+    }
+    
+    
+    #SAVE THE DATA
+    # the reason it takes this much code to save the data is that it should be flexible with number of columns in the final data frame as it changes with the number of projects.
+    eNames = c()
+    pNames = c()
+    rNames = c()
+    wNames = c()
+    for (p in 1:nP){
+      eNames = c(eNames, paste("Expectation", p, sep = ""))
+      pNames = c(pNames, paste("Project", p,"_Tasks", sep = ""))
+      rNames = c(rNames, paste("Project", p, "_Rewards", sep = ""))
+      wNames = c(wNames, paste("Project", p, "_Work", sep = ""))
+    }
+    
+    temp_data = as.data.frame(matrix(nrow = nA, ncol = nP*4+10))
+    colnames(temp_data) = c(
+      "Round",
+      "Agent",
+      "Choice",
+      "Reward",
+      eNames,
+      pNames,rNames,wNames,
+      "alpha",
+      "beta",
+      "nAgents",
+      "nProjects",
+      "nTasks",
+      "nRounds"
+    )
+    
+    temp_data[,1] = round
+    temp_data[,2] = 1:nA
+    temp_data[,3] = projectChoice
+    temp_data[,4] = agentReward
+    
+    for (p in 1:nP){
+      e = paste("Expectation", p, sep = "")
+      pr = paste("Project", p,"_Tasks", sep = "")
+      r = paste("Project", p, "_Rewards", sep = "")
+      w = paste("Project", p, "_Work", sep = "")
+      
+      temp_data[e] = expectations[,p]
+      temp_data[pr] = projects[p]
+      temp_data[r] = rewards[p]
+      temp_data[w] = work[p]
+    }
+    
+    n = ncol(temp_data)
+    temp_data[,n-5] = alpha
+    temp_data[,n-4] = beta
+    temp_data[,n-3] = nA
+    temp_data[,n-2] = nP
+    temp_data[,n-1] = nTasks
+    temp_data[,n] = nR
+    
+    #saving this rounds data into a list of data frames
+    data_list[[i]] = temp_data
+    i = i + 1
+    
+    
+  } # End of the round loop
+  
+  # combine all the data frames in the data_list into one 
+  data = do.call(rbind, data_list)
+  
+  return(data)
+  
+}
+
+```
+
+```{r Variable options}
+nRounds = 50
+nAgents = 18
+nProjects = 3
+rewardExp = 0.5
+taskThresh = 0.4
+alpha = c(0.3, 0.5, 0.7)
+beta = c(0.2, 0.3, 0.4)
+
+```
+
+
+```{r Run simulation}
+data_list = list()
+i = 1
+for (a in alpha){
+  for (b in beta){
+    data_list[[i]] = simulation(nAgents, nProjects, nRounds, rewardExp, taskThresh, a, b)
+    i = i + 1
+  }
+}
+data = do.call(rbind, data_list)
+```
+
+
+```{r}
+ggplot(data, aes(y = as.factor(Agent), x = Round)) +
+  geom_point(aes(color = as.factor(Choice)), shape = 15, size = 3) +
+  facet_wrap(alpha~beta) +
+  theme_minimal()
+```
+
