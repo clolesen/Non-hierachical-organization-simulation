@@ -5,10 +5,10 @@ date: "3/19/2019"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+This is the simulation code for the project named: "Can too many cooks spoil the broth? Boundary conditions to non-hierachical organization"
 
+
+Loading libraries
 ```{r libraries}
 library(tidyverse)
 library(ggplot2)
@@ -261,6 +261,7 @@ simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta){
 
 ```
 
+Variables that can be changed before running the simulation
 ```{r Variable options}
 nRounds = 50
 nAgents = 18
@@ -272,7 +273,7 @@ beta = c(0.2, 0.3, 0.4)
 
 ```
 
-
+Running the sikmulation fuction in loops with varying variables
 ```{r Run simulation}
 data_list = list()
 i = 1
@@ -286,6 +287,7 @@ data = do.call(rbind, data_list)
 ```
 
 
+PLOTS
 ```{r}
 ggplot(data, aes(y = as.factor(Agent), x = Round)) +
   geom_point(aes(color = as.factor(Choice)), shape = 15, size = 3) +
