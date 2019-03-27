@@ -87,7 +87,7 @@ createExpectations = function(nA, nP){
 
 # SIMULATION FUNCTION
 # Function that runs the simulation an returns a data frame.
-simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta){
+simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta, sim){
   
   # Use other functions to set up the simulation
   network = createNetwork(nA)
@@ -204,8 +204,9 @@ simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta){
       wNames = c(wNames, paste("Project", p, "_Work", sep = ""))
     }
     
-    temp_data = as.data.frame(matrix(nrow = nA, ncol = nP*4+10))
+    temp_data = as.data.frame(matrix(nrow = nA, ncol = nP*4+11))
     colnames(temp_data) = c(
+      "Simulation",
       "Round",
       "Agent",
       "Choice",
@@ -220,10 +221,11 @@ simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta){
       "nRounds"
     )
     
-    temp_data[,1] = round
-    temp_data[,2] = 1:nA
-    temp_data[,3] = projectChoice
-    temp_data[,4] = agentReward
+    temp_data[,1] = sim
+    temp_data[,2] = round
+    temp_data[,3] = 1:nA
+    temp_data[,4] = projectChoice
+    temp_data[,5] = agentReward
     
     for (p in 1:nP){
       e = paste("Expectation", p, sep = "")
@@ -268,8 +270,8 @@ nAgents = 18
 nProjects = 3
 rewardExp = 0.5
 taskThresh = 0.4
-alpha = c(0.3, 0.5, 0.7)
-beta = c(0.2, 0.3, 0.4)
+alpha = 0.5
+beta = 0.3
 
 ```
 
@@ -277,11 +279,9 @@ Running the sikmulation fuction in loops with varying variables
 ```{r Run simulation}
 data_list = list()
 i = 1
-for (a in alpha){
-  for (b in beta){
-    data_list[[i]] = simulation(nAgents, nProjects, nRounds, rewardExp, taskThresh, a, b)
-    i = i + 1
-  }
+for (s in 1:9){
+  data_list[[i]] = simulation(nAgents, nProjects, nRounds, rewardExp, taskThresh, a, b, s)
+  i = i + 1
 }
 data = do.call(rbind, data_list)
 ```
@@ -289,9 +289,45 @@ data = do.call(rbind, data_list)
 
 PLOTS
 ```{r}
-ggplot(data, aes(y = as.factor(Agent), x = Round)) +
-  geom_point(aes(color = as.factor(Choice)), shape = 15, size = 3) +
-  facet_wrap(alpha~beta) +
-  theme_minimal()
+#Alpha ~ Beta plot
+#ggplot(data, aes(y = as.factor(Agent), x = Round)) +
+#  geom_point(aes(color = as.factor(Choice)), shape = 15, size = 3) +
+#  facet_wrap(alpha~beta) +
+#  theme_minimal()
+
+
+# Project development over time
+ggplot(data, aes(x = Round))+
+  geom_line(aes(y = Project1_Tasks), color = 1) +
+  geom_line(aes(y = Project2_Tasks), color = 2) +
+  geom_line(aes(y = Project3_Tasks), color = 3) +
+  facet_wrap(~Simulation) +
+  theme_minimal() +
+  labs(title = "Tasks left each round",subtitle = "Projects seperated by color", y = "Tasks")
+
+
+ggplot(data, aes(x = Round))+
+  geom_line(aes(y = Project1_Work), color = 1) +
+  geom_line(aes(y = Project2_Work), color = 2) +
+  geom_line(aes(y = Project3_Work), color = 3) +
+  facet_wrap(~Simulation) +
+  theme_minimal() +
+  labs(title = "Number of tasks done each round", subtitle = "Projects seperated by color", y = "Tasks")
+
+# Reward plots
+ggplot(data, aes(x = Round, y = Reward))+
+  geom_line(aes(color = as.character(Agent))) +
+  facet_wrap(~Simulation) +
+  theme_minimal() +
+  labs(title = "Reward given each round", subtitle = "Agents seperated by color", color = "Agent")
+
+
+ggplot(data, aes(x = Round, y = Reward))+
+  stat_summary(fun.y=min, geom="line") +
+  stat_summary(fun.y=max, geom="line") +
+  stat_summary(fun.y=mean, geom="line", color = "red") +
+  facet_wrap(~Simulation) +
+  theme_minimal() +
+  labs(title = "Reward given each round", subtitle = "Red represents the mean and black the minimum and maximum reward")
 ```
 
