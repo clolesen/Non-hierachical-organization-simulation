@@ -79,6 +79,7 @@ createExpectations = function(nA, nP){
   for(a in 1:nA){
     for(p in 1:nP){
       expMatrix[a,p] = runif(1) # Random number between 0 and 1 drawn from a uniform distribution
+      #expMatrix[a,p] = rnorm(1, 0.7, 0.1) # from normal distribution, Mean = 0.7, sd = 0.1
     }
   }
   return(expMatrix)
@@ -329,5 +330,30 @@ ggplot(data, aes(x = Round, y = Reward))+
   facet_wrap(~Simulation) +
   theme_minimal() +
   labs(title = "Reward given each round", subtitle = "Red represents the mean and black the minimum and maximum reward")
+
+
+# Reward - Expectation plots
+ggplot(subset(data, Agent %in% c(1,9)), aes(x = Round)) +
+  geom_point(aes(y = Project1_Rewards/Project1_Work), size = .4) +
+  geom_line(aes(y = Expectation1, color = as.character(Agent))) +
+  facet_wrap(~Simulation) +
+  theme_minimal() +
+  labs(title = "Agent 1 & 9, Reward and Expectation for project 1", subtitle = "The lines represents the expectation for agent 1 and 9, the dots represents the actual reward each round", y = "Reward - Expectation", color = "Agent")
+
+
+ggplot(subset(data, Agent %in% c(1,9)), aes(x = Round)) +
+  geom_point(aes(y = Project2_Rewards/Project2_Work), size = .4) +
+  geom_line(aes(y = Expectation2, color = as.character(Agent))) +
+  facet_wrap(~Simulation) +
+  theme_minimal() +
+  labs(title = "Agent 1 & 9, Reward and Expectation for project 2", subtitle = "The lines represents the expectation for agent 1 and 9, the dots represents the actual reward each round", y = "Reward - Expectation", color = "Agent")
+
+
+ggplot(subset(data, Agent %in% c(1,9)), aes(x = Round)) +
+  geom_point(aes(y = Project3_Rewards/Project3_Work), size = .4) +
+  geom_line(aes(y = Expectation3, color = as.character(Agent))) +
+  facet_wrap(~Simulation) +
+  theme_minimal() +
+  labs(title = "Agent 1 & 9, Reward and Expectation for project 3", subtitle = "The lines represents the expectation for agent 1 and 9, the dots represents the actual reward each round", y = "Reward - Expectation", color = "Agent")
 ```
 
