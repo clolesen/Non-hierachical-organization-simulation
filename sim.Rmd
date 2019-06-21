@@ -117,7 +117,7 @@ createExpectations = function(nA, nP){
 
 # SIMULATION FUNCTION
 # Function that runs the simulation an returns a data frame.
-simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta, sim){
+simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta, sim = 1){
   
   # Use other functions to set up the simulation
   network = createNetwork(nA)
@@ -212,7 +212,7 @@ simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta, sim){
       }
     }
     
-    #update projects (should this come before or after calculation of reward?)
+    #update projects 
     projects = projects - work # just subtracts the amount of work on each project with the amount of work left on each project.
     for (p in projects){
       if (p < 0){
@@ -314,9 +314,28 @@ for (s in 1:9){
   data_list[[i]] = simulation(nAgents, nProjects, nRounds, rewardExp, taskThresh, alpha, beta, s)
   i = i + 1
 }
+
 data = do.call(rbind, data_list)
 
-write.csv(data, "data_9sim.csv")
+#write.csv(data, "data_9sim.csv")
+
+
+# Check Exponent and trheshold
+data_list = list()
+i = 1
+for (e in c(0,0.3,0.5,0.7)){
+  for (t in c(0.2, 0.4, 0.7)){
+    set.seed(61)
+    d = simulation(nAgents, nProjects, nRounds, e, t, alpha, beta)
+    d$exp = e
+    d$thresh = t
+    data_list[[i]] = d
+    i = i + 1
+  }
+}
+
+e_t_data = do.call(rbind, data_list)
+
 ```
 
 
@@ -394,6 +413,79 @@ ggplot(data, aes(y = Reward, x = Agent)) +
   facet_wrap(~Simulation) +
   theme_minimal() +
   labs(title = "Bar plot of the total sum of rewards per agent", subtitle = "Across 9 different simulations of 50 rounds each", y = "Sum of rewards")
+
+
+
+
+###____###
+#Exponent and Threshold plots
+# Project development over time
+ggplot(e_t_data, aes(x = Round))+
+  geom_line(aes(y = Project1_Tasks), color = 1) +
+  geom_line(aes(y = Project2_Tasks), color = 2) +
+  geom_line(aes(y = Project3_Tasks), color = 3) +
+  facet_wrap(exp~thresh, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Tasks left each round",subtitle = "Projects seperated by color \nValues above plots: Upper = Eksponent, Lower = Threshold", y = "Tasks")
+
+
+ggplot(e_t_data, aes(x = Round))+
+  geom_line(aes(y = Project1_Work), color = 1) +
+  geom_line(aes(y = Project2_Work), color = 2) +
+  geom_line(aes(y = Project3_Work), color = 3) +
+  facet_wrap(exp~thresh, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Number of tasks done each round", subtitle = "Projects seperated by color\nValues above plots: Upper = Eksponent, Lower = Threshold", y = "Tasks")
+
+# Reward plots
+ggplot(e_t_data, aes(x = Round, y = Reward))+
+  geom_line(aes(color = as.character(Agent))) +
+  facet_wrap(exp~thresh, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Reward given each round", subtitle = "Agents seperated by color\nValues above plots: Upper = Eksponent, Lower = Threshold", color = "Agent")
+
+
+ggplot(e_t_data, aes(x = Round, y = Reward))+
+  stat_summary(fun.y=min, geom="line") +
+  stat_summary(fun.y=max, geom="line") +
+  stat_summary(fun.y=mean, geom="line", color = "red") +
+  facet_wrap(exp~thresh, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Reward given each round", subtitle = "Red represents the mean and black the minimum and maximum reward\nValues above plots: Upper = Eksponent, Lower = Threshold")
+
+
+# Reward - Expectation plots
+ggplot(subset(e_t_data, Agent %in% c(1,9)), aes(x = Round)) +
+  geom_point(aes(y = Project1_Rewards/Project1_Work), size = .4) +
+  geom_line(aes(y = Expectation1, color = as.character(Agent))) +
+  facet_wrap(exp~thresh, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Agent 1 & 9, Reward and Expectation for project 1", subtitle = "The lines represents the expectation for agent 1 and 9, the dots represents the actual reward each round\nValues above plots: Upper = Eksponent, Lower = Threshold", y = "Reward - Expectation", color = "Agent")
+
+
+ggplot(subset(e_t_data, Agent %in% c(1,9)), aes(x = Round)) +
+  geom_point(aes(y = Project2_Rewards/Project2_Work), size = .4) +
+  geom_line(aes(y = Expectation2, color = as.character(Agent))) +
+  facet_wrap(exp~thresh, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Agent 1 & 9, Reward and Expectation for project 2", subtitle = "The lines represents the expectation for agent 1 and 9, the dots represents the actual reward each round\nValues above plots: Upper = Eksponent, Lower = Threshold", y = "Reward - Expectation", color = "Agent")
+
+
+ggplot(subset(e_t_data, Agent %in% c(1,9)), aes(x = Round)) +
+  geom_point(aes(y = Project3_Rewards/Project3_Work), size = .4) +
+  geom_line(aes(y = Expectation3, color = as.character(Agent))) +
+  facet_wrap(exp~thresh, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Agent 1 & 9, Reward and Expectation for project 3", subtitle = "The lines represents the expectation for agent 1 and 9, the dots represents the actual reward each round\nValues above plots: Upper = Eksponent, Lower = Threshold", y = "Reward - Expectation", color = "Agent")
+
+# total reward plot
+ggplot(e_t_data, aes(y = Reward, x = Agent)) +
+  stat_summary(fun.y = "sum", geom = "bar") + 
+  facet_wrap(exp~thresh, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Bar plot of the total sum of rewards per agent", subtitle = "Across 12 different simulations of 50 rounds each\nValues above plots: Upper = Eksponent, Lower = Threshold", y = "Sum of rewards")
+
+
 ```
 
 
@@ -428,7 +520,7 @@ ggplot(exp_data, aes(x = work, y = reward)) +
   facet_wrap(~exp) +
   xlim(0, 20) +
   ylim(0, 20) +
-  labs(title = "Functions of how much total reward is given per project as the number of agents rise", subtitle = "The function is linear til 6 agents (18 (n agents) devided by 6 (n projects)) and exponential from there til 18. \nThe 6 plots show the function for different exponents", y = "Total reward", x = "Number of agents")
+  labs(title = "Functions of how much total reward is given per project as the number of agents rise", subtitle = "The function is linear til 6 agents (18 (n agents) devided by 3 (n projects)) and exponential from there til 18. \nThe 6 plots show the function for different exponents", y = "Total reward", x = "Number of agents")
 
 
 
