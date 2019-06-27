@@ -344,19 +344,19 @@ e_t_data = do.call(rbind, data_list)
 
 #Asymetric projects
 data_list = list()
-cpList = list(c(150,300,450), c(50,300,550)) #custom projects list
+cpList = list(c(100, 100, 150, 150, 200, 200), c(50, 100, 125, 175, 200, 250)) #custom projects list
 i = 1
 for (cp in cpList){
   set.seed(61)
   for (s in 1:3){
     d = simulation(nAgents, nProjects, nRounds, e, t, alpha, beta, s, cp)
-    d$cp = paste(cp[1],cp[2],cp[3])
+    d$cp = paste(cp[1],cp[2],cp[3],cp[4],cp[5],cp[6])
     data_list[[i]] = d
     i = i + 1
   }
 }
 
-asym_data = do.call(rbind, data_list)
+asym_data6p = do.call(rbind, data_list)
 
 
 
@@ -436,6 +436,22 @@ ggplot(data, aes(y = Reward, x = Agent)) +
   facet_wrap(~Simulation) +
   theme_minimal() +
   labs(title = "Bar plot of the total sum of rewards per agent", subtitle = "Across 9 different simulations of 50 rounds each", y = "Sum of rewards")
+
+
+
+ggplot(subset(data, Agent %in% c(1,9)), aes(x = Round, y = as.factor(Choice))) +
+  geom_point(aes(color = as.factor(Agent))) +
+  facet_wrap(~Simulation) +
+  theme_minimal() +
+  labs(title = "Agent 1 and 9 project choice", subtitle = "Across 9 different simulations of 50 rounds each", y = "Projects", color = "Agent")
+
+
+ggplot(data, aes(x = Round, y = as.factor(Agent))) +
+  geom_point(aes(color = as.factor(Choice)), shape = 15, size = 2) +
+  facet_wrap(~Simulation) +
+  theme_minimal() +
+  labs(title = "Project choice for all agents", subtitle = "Projects represented by color", y = "Actors", color = "Projects")
+
 
 
 
@@ -577,6 +593,19 @@ ggplot(asym_data, aes(y = Reward, x = Agent)) +
   theme_minimal() +
   labs(title = "Bar plot of the total sum of rewards per agent", subtitle = "Across 6 different simulations of 50 rounds each", y = "Sum of rewards")
 
+#Project Choice plots
+ggplot(subset(asym_data, Agent %in% c(1,9)), aes(x = Round, y = as.factor(Choice))) +
+  geom_point(aes(color = as.factor(Agent))) +
+  facet_wrap(cp~Simulation) +
+  theme_minimal() +
+  labs(title = "Agent 1 and 9 project choice", subtitle = "Across 9 different simulations of 50 rounds each", y = "Projects", color = "Agent")
+
+
+ggplot(asym_data, aes(x = Round, y = as.factor(Agent))) +
+  geom_point(aes(color = as.factor(Choice)), shape = 15, size = 2) +
+  facet_wrap(cp~Simulation) +
+  theme_minimal() +
+  labs(title = "Project choice for all agents", subtitle = "Projects represented by color", y = "Actors", color = "Projects")
 
 #### 6 projects ####
 
@@ -676,6 +705,132 @@ ggplot(data6p, aes(y = Reward, x = Agent)) +
   theme_minimal() +
   labs(title = "Bar plot of the total sum of rewards per agent", subtitle = "Across 9 different simulations of 50 rounds each", y = "Sum of rewards")
 
+
+#Project Choice plots
+ggplot(subset(data6p, Agent %in% c(1,9)), aes(x = Round, y = as.factor(Choice))) +
+  geom_point(aes(color = as.factor(Agent))) +
+  facet_wrap(~Simulation) +
+  theme_minimal() +
+  labs(title = "Agent 1 and 9 project choice", subtitle = "Across 9 different simulations of 50 rounds each", y = "Projects", color = "Agent")
+
+
+ggplot(data6p, aes(x = Round, y = as.factor(Agent))) +
+  geom_point(aes(color = as.factor(Choice)), shape = 15, size = 2) +
+  facet_wrap(~Simulation) +
+  theme_minimal() +
+  labs(title = "Project choice for all agents", subtitle = "Projects represented by color", y = "Actors", color = "Projects")
+
+
+###### 6 asymetric projects #########
+
+ggplot(asym_data6p, aes(x = Round))+
+  geom_line(aes(y = Project1_Tasks), color = 1) +
+  geom_line(aes(y = Project2_Tasks), color = 2) +
+  geom_line(aes(y = Project3_Tasks), color = 3) +
+  geom_line(aes(y = Project4_Tasks), color = 4) +
+  geom_line(aes(y = Project5_Tasks), color = 5) +
+  geom_line(aes(y = Project6_Tasks), color = 6) +
+  facet_wrap(cp~Simulation, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Tasks left each round",subtitle = "Projects seperated by color", y = "Tasks")
+
+
+ggplot(asym_data6p, aes(x = Round))+
+  geom_line(aes(y = Project1_Work), color = 1) +
+  geom_line(aes(y = Project2_Work), color = 2) +
+  geom_line(aes(y = Project3_Work), color = 3) +
+  geom_line(aes(y = Project4_Work), color = 4) +
+  geom_line(aes(y = Project5_Work), color = 5) +
+  geom_line(aes(y = Project6_Work), color = 6) +
+  facet_wrap(cp~Simulation, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Number of tasks done each round", subtitle = "Projects seperated by color", y = "Tasks")
+
+# Reward plots
+ggplot(asym_data6p, aes(x = Round, y = Reward))+
+  geom_line(aes(color = as.character(Agent))) +
+  facet_wrap(cp~Simulation, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Reward given each round", subtitle = "Agents seperated by color", color = "Agent")
+
+
+ggplot(asym_data6p, aes(x = Round, y = Reward))+
+  stat_summary(fun.y=min, geom="line") +
+  stat_summary(fun.y=max, geom="line") +
+  stat_summary(fun.y=mean, geom="line", color = "red") +
+  facet_wrap(cp~Simulation, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Reward given each round", subtitle = "Red represents the mean and black the minimum and maximum reward")
+
+
+# Reward - Expectation plots
+ggplot(subset(asym_data6p, Agent %in% c(1,9)), aes(x = Round)) +
+  geom_point(aes(y = Project1_Rewards/Project1_Work), size = .4) +
+  geom_line(aes(y = Expectation1, color = as.character(Agent))) +
+  facet_wrap(cp~Simulation, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Agent 1 & 9, Reward and Expectation for project 1", subtitle = "The lines represents the expectation for agent 1 and 9, the dots represents the actual reward each round", y = "Reward - Expectation", color = "Agent")
+
+
+ggplot(subset(asym_data6p, Agent %in% c(1,9)), aes(x = Round)) +
+  geom_point(aes(y = Project2_Rewards/Project2_Work), size = .4) +
+  geom_line(aes(y = Expectation2, color = as.character(Agent))) +
+  facet_wrap(cp~Simulation, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Agent 1 & 9, Reward and Expectation for project 2", subtitle = "The lines represents the expectation for agent 1 and 9, the dots represents the actual reward each round", y = "Reward - Expectation", color = "Agent")
+
+
+ggplot(subset(asym_data6p, Agent %in% c(1,9)), aes(x = Round)) +
+  geom_point(aes(y = Project3_Rewards/Project3_Work), size = .4) +
+  geom_line(aes(y = Expectation3, color = as.character(Agent))) +
+  facet_wrap(cp~Simulation, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Agent 1 & 9, Reward and Expectation for project 3", subtitle = "The lines represents the expectation for agent 1 and 9, the dots represents the actual reward each round", y = "Reward - Expectation", color = "Agent")
+
+ggplot(subset(asym_data6p, Agent %in% c(1,9)), aes(x = Round)) +
+  geom_point(aes(y = Project4_Rewards/Project4_Work), size = .4) +
+  geom_line(aes(y = Expectation4, color = as.character(Agent))) +
+  facet_wrap(cp~Simulation, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Agent 1 & 9, Reward and Expectation for project 4", subtitle = "The lines represents the expectation for agent 1 and 9, the dots represents the actual reward each round", y = "Reward - Expectation", color = "Agent")
+
+
+ggplot(subset(asym_data6p, Agent %in% c(1,9)), aes(x = Round)) +
+  geom_point(aes(y = Project5_Rewards/Project5_Work), size = .4) +
+  geom_line(aes(y = Expectation5, color = as.character(Agent))) +
+  facet_wrap(cp~Simulation, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Agent 1 & 9, Reward and Expectation for project 5", subtitle = "The lines represents the expectation for agent 1 and 9, the dots represents the actual reward each round", y = "Reward - Expectation", color = "Agent")
+
+
+ggplot(subset(asym_data6p, Agent %in% c(1,9)), aes(x = Round)) +
+  geom_point(aes(y = Project6_Rewards/Project6_Work), size = .4) +
+  geom_line(aes(y = Expectation6, color = as.character(Agent))) +
+  facet_wrap(cp~Simulation, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Agent 1 & 9, Reward and Expectation for project 6", subtitle = "The lines represents the expectation for agent 1 and 9, the dots represents the actual reward each round", y = "Reward - Expectation", color = "Agent")
+
+# total reward plot
+ggplot(asym_data6p, aes(y = Reward, x = Agent)) +
+  stat_summary(fun.y = "sum", geom = "bar") + 
+  facet_wrap(cp~Simulation, ncol = 3) +
+  theme_minimal() +
+  labs(title = "Bar plot of the total sum of rewards per agent", subtitle = "Across 6 different simulations of 50 rounds each", y = "Sum of rewards")
+
+
+#Project Choice plots
+ggplot(subset(asym_data6p, Agent %in% c(1,9)), aes(x = Round, y = as.factor(Choice))) +
+  geom_point(aes(color = as.factor(Agent))) +
+  facet_wrap(cp~Simulation) +
+  theme_minimal() +
+  labs(title = "Agent 1 and 9 project choice", subtitle = "Across 9 different simulations of 50 rounds each", y = "Projects", color = "Agent")
+
+
+ggplot(asym_data6p, aes(x = Round, y = as.factor(Agent))) +
+  geom_point(aes(color = as.factor(Choice)), shape = 15, size = 2) +
+  facet_wrap(cp~Simulation) +
+  theme_minimal() +
+  labs(title = "Project choice for all agents", subtitle = "Projects represented by color", y = "Actors", color = "Projects")
 
 
 ```
