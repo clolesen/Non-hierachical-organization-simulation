@@ -60,39 +60,11 @@ createNetwork = function(nA){
 
 # CREATE PROJECTS FUNCTION
 # Function that returns a vector representing the number of tasks in each project
-createProjects = function(nA, nP, nR, symmetry){
+createProjects = function(nA, nP, nR){
   
-  if (symmetry == T){
-    tasks = nA*nR/nP # formula for the number of tasks
-    projectList = c(rep(tasks,nP)) # repeat the number of tasks nP times and make it into a vector
-  }
-  
-  if (symmetry == F){
-    tasks = nA*nR/nP # formula for the number of tasks
-    projectList = c(rep(tasks,nP)) # repeat the number of tasks nP times and make it into a vector
-  
-    nMod = floor(nP/2)
-    
-    modList = c()
-    for (mod in 1:nMod){
-      modList = c(
-        modList,
-        mod/(mod+mod^2)
-      )
-    }
-    
-    pMedian = median(1:nP)
-    for (p in 1:nP){
-      if (p < pMedian){
-        projectList[p] = round(projectList[p] * modList[p])
-      }
-      if (p > pMedian){
-        projectList[p] = round(projectList[p] * (modList[rev(1:nP)[p]] + 1))
-      }
-    }
-  }
-  
-  
+  tasks = nA*nR/nP # formula for the number of tasks
+  projectList = c(rep(tasks,nP)) # repeat the number of tasks nP times and make it into a vector
+  projectList = round(projectList,2)
   return(projectList)
 }
 
@@ -121,10 +93,17 @@ simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta, sim = 1, c
   
   # Use other functions to set up the simulation
   network = createNetwork(nA)
-  if (customProjects == F) projects = createProjects(nA, nP, nR, pSymmetry)
-  if (customProjects != F) projects = customProjects #Custom projects should be a vector with as many items as nP
+  if (customProjects == F) {
+    projects = createProjects(nA, nP, nR)
+    sym = "symmetric" 
+  }
+  if (customProjects != F){
+    projects = customProjects #Custom projects should be a vector with as many items as nP
+    sym = "Asymmetric"
+  }
   expectations = createExpectations(nA, nP)
   nTasks = mean(projects)
+  startTasks = paste(projects, collapse = " - ")
   
   #prepare a list for storing the data of each round
   data_list = list()
@@ -235,7 +214,7 @@ simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta, sim = 1, c
       wNames = c(wNames, paste("Project", p, "_Work", sep = ""))
     }
     
-    temp_data = as.data.frame(matrix(nrow = nA, ncol = nP*4+11))
+    temp_data = as.data.frame(matrix(nrow = nA, ncol = nP*4+12))
     colnames(temp_data) = c(
       "Simulation",
       "Round",
@@ -244,11 +223,12 @@ simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta, sim = 1, c
       "Reward",
       eNames,
       pNames,rNames,wNames,
+      "symmetry",
       "alpha",
       "beta",
       "nAgents",
       "nProjects",
-      "nTasks",
+      "startTasks",
       "nRounds"
     )
     
@@ -271,11 +251,12 @@ simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta, sim = 1, c
     }
     
     n = ncol(temp_data)
+    temp_data[,n-6] = sym
     temp_data[,n-5] = alpha
     temp_data[,n-4] = beta
     temp_data[,n-3] = nA
     temp_data[,n-2] = nP
-    if (pSymmetry == TRUE) {temp_data[,n-1] = nTasks} else {temp_data[,n-1] = "asymmetric"}
+    temp_data[,n-1] = startTasks
     temp_data[,n] = nR
     
     #saving this rounds data into a list of data frames
@@ -292,35 +273,109 @@ simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta, sim = 1, c
   
 }
 
+# Function that greates custom project list for either 3 or 6 projects.
+getAsymProj = function(nA,nP,nR){
+  
+  if (nP == 3){
+    p = list(
+      c(
+        (nA*nR/3)*0.5,
+        (nA*nR/3),
+        (nA*nR/3)*1.5
+      ),
+      c(
+        (nA*nR/3)*0.2,
+        (nA*nR/3),
+        (nA*nR/3)*1.8
+      )
+    )
+  }
+  
+  if (nP == 6){
+    p = list(
+      c(
+        (nA*nR/6)*0.6,
+        (nA*nR/6)*0.6,
+        (nA*nR/6),
+        (nA*nR/6),
+        (nA*nR/6)*1.4,
+        (nA*nR/6)*1.4
+      ),
+      c(
+        (nA*nR/6)*0.3,
+        (nA*nR/6)*0.6,
+        (nA*nR/6)*0.9,
+        (nA*nR/6)*1.1,
+        (nA*nR/6)*1.4,
+        (nA*nR/6)*1.7
+      )
+    )
+  }
+  p[[1]] = round(p[[1]],2)
+  p[[2]] = round(p[[2]],2)
+  return(p)
+}
 ```
 
 Variables that can be changed before running the simulation
 ```{r Variable options}
 nRounds = 50
-nAgents = 18
-nProjects = 6
+#nAgents = 18
+#nProjects = 6
 rewardExp = 0.5
 taskThresh = 0.4
 alpha = 0.5
 beta = 0.3
-pSymmetry = T
 ```
 
 Running the simulation fuction in loops with varying variables
 ```{r Run simulation}
 
+# Number of agents to loop through
+agents = c(18,40,60,90,120)
 
+# loop through different numbers of agents and 3 projects
 data_list = list()
 i = 1
-set.seed(61)
-for (s in 1:9){
-  data_list[[i]] = simulation(nAgents, nProjects, nRounds, rewardExp, taskThresh, alpha, beta, s)
-  i = i + 1
+for (a in agents) {
+  set.seed(61)
+  for (s in 1:9){
+    data_list[[i]] = simulation(a, 3, nRounds, rewardExp, taskThresh, alpha, beta, s)
+    i = i + 1
+  }
+  
+  customProjList = getAsymProj(a,3,nRounds)
+  for (cp in customProjList){
+    set.seed(61)
+    for (s in 1:3){
+      data_list[[i]] = simulation(a, 3, nRounds, rewardExp, taskThresh, alpha, beta, s, cp)
+      i = i + 1
+    }
+  }
 }
+data3pAll = do.call(rbind, data_list)
 
-data18a3p = do.call(rbind, data_list)
+# loop through different numbers of agents and 6 projects
+data_list = list()
+i = 1
+for (a in agents) {
+  set.seed(61)
+  for (s in 1:9){
+    data_list[[i]] = simulation(a, 6, nRounds, rewardExp, taskThresh, alpha, beta, s)
+    i = i + 1
+  }
+  
+  customProjList = getAsymProj(a,6,nRounds)
+  for (cp in customProjList){
+    set.seed(61)
+    for (s in 1:3){
+      data_list[[i]] = simulation(a, 6, nRounds, rewardExp, taskThresh, alpha, beta, s, cp)
+      i = i + 1
+    }
+  }
+}
+data6pAll = do.call(rbind, data_list)
 
-#write.csv(data, "data_9sim.csv")
 
 
 # Check Exponent and trheshold
@@ -336,35 +391,7 @@ for (e in c(0,0.3,0.5,0.7)){
     i = i + 1
   }
 }
-
 e_t_data = do.call(rbind, data_list)
-
-
-
-
-#Asymetric projects
-data_list = list()
-#c(150,300,450), c(50, 300, 550) # 3 projects 18 agents 50 rounds
-#c(100, 100, 150, 150, 200, 200), c(50, 100, 125, 175, 200, 250) # 6 projects 18 agents 50 rounds
-#c(1000,2000,3000), c(350, 2000, 3650) # 3 projects 120 agents 50 rounds
-#c(650, 650, 1000, 1000, 1350, 1350), c(350, 650, 850, 1150, 1350, 1650) # 6 projects 120 agents 50 rounds
-cpList = list(c(100, 100, 150, 150, 200, 200), c(50, 100, 125, 175, 200, 250)) #custom projects list
-i = 1
-for (cp in cpList){
-  set.seed(61)
-  for (s in 1:3){
-    d = simulation(nAgents, nProjects, nRounds, rewardExp, taskThresh, alpha, beta, s, cp)
-    d$cp = paste(cp[1],cp[2],cp[3],
-                 cp[4],cp[5],cp[6]
-                 )
-    data_list[[i]] = d
-    i = i + 1
-  }
-}
-
-asym_data18a6p = do.call(rbind, data_list)
-
-
 
 
 
@@ -379,7 +406,6 @@ for (s in 1:100){
     i = i + 1
   }
   print(s)}
-
 alphaSim = do.call(rbind, data_list)
 ```
 
@@ -834,7 +860,7 @@ plots18a6p = simPlots(data18a6p,6)
 plots18a3p_asym = simPlots(asym_data18a3p,3, sym = F)
 plots18a6p_asym = simPlots(asym_data18a6p,6, sym = F)
 
-
+simPlots(subset(data3pAll, nAgents == 120 & symmetry == "symmetric"),3)[[3]]
 
 ggsave("plots/18_agents/3_projects/Symetric-projects-plots/Tasks-left_plot.png", plots18a3p[[1]])
 ggsave("plots/18_agents/3_projects/Symetric-projects-plots/Tasks-done_plot.png", plots18a3p[[2]])
