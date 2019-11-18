@@ -99,11 +99,11 @@ simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta, sim = 1, c
   }
   if (customProjects != F){
     projects = customProjects #Custom projects should be a vector with as many items as nP
-    sym = "Asymmetric"
+    sym = "asymmetric"
   }
   expectations = createExpectations(nA, nP)
   nTasks = mean(projects)
-  startTasks = paste(projects, collapse = " - ")
+  startTasks = paste(projects, collapse = " / ")
   
   #prepare a list for storing the data of each round
   data_list = list()
@@ -146,7 +146,8 @@ simulation = function(nA, nP, nR, rewardExp, taskThresh, alpha, beta, sim = 1, c
         # rewardExp is the exponent defined outside the simulation.
         # (work[p]-maxOpt+1) is just the number of agents above maxOpt + 1 (to make the exponent work from the first agent above maxOpt)
         # the minus 1 in the end is add to shift it down to the intercept
-        rewards[p] = maxOpt + (work[p]-maxOpt+1)^rewardExp-1 
+        #rewards[p] = maxOpt + (work[p]-maxOpt+1)^rewardExp-1 # The exponential function
+        rewards[p] = maxOpt + (work[p]-maxOpt+1)*(2/12)
       }
       
       #if the number of tasks left is lower than a percentage (defined outside the simulation) of the max amount of tasks, then calculate a modifier and apply it to the total amount of rewards.
@@ -302,12 +303,12 @@ getAsymProj = function(nA,nP,nR){
         (nA*nR/6)*1.4
       ),
       c(
-        (nA*nR/6)*0.3,
-        (nA*nR/6)*0.6,
-        (nA*nR/6)*0.9,
-        (nA*nR/6)*1.1,
-        (nA*nR/6)*1.4,
-        (nA*nR/6)*1.7
+        nA*nR*0.0476,
+        nA*nR*0.0952,
+        nA*nR*0.1429,
+        nA*nR*0.1905,
+        nA*nR*0.2381,
+        nA*nR*0.2857
       )
     )
   }
@@ -319,11 +320,11 @@ getAsymProj = function(nA,nP,nR){
 
 Variables that can be changed before running the simulation
 ```{r Variable options}
-nRounds = 50
+nRounds = 30
 #nAgents = 18
 #nProjects = 6
 rewardExp = 0.5
-taskThresh = 0.4
+taskThresh = 0.5
 alpha = 0.5
 beta = 0.3
 ```
@@ -345,12 +346,11 @@ for (a in agents) {
   }
   
   customProjList = getAsymProj(a,3,nRounds)
-  for (cp in customProjList){
-    set.seed(61)
-    for (s in 1:3){
-      data_list[[i]] = simulation(a, 3, nRounds, rewardExp, taskThresh, alpha, beta, s, cp)
-      i = i + 1
-    }
+  cp = customProjList[[1]]
+  set.seed(61)
+  for (s in 1:9){
+    data_list[[i]] = simulation(a, 3, nRounds, rewardExp, taskThresh, alpha, beta, s, cp)
+    i = i + 1
   }
 }
 data3pAll = do.call(rbind, data_list)
@@ -366,17 +366,17 @@ for (a in agents) {
   }
   
   customProjList = getAsymProj(a,6,nRounds)
-  for (cp in customProjList){
-    set.seed(61)
-    for (s in 1:3){
-      data_list[[i]] = simulation(a, 6, nRounds, rewardExp, taskThresh, alpha, beta, s, cp)
-      i = i + 1
-    }
+  cp = customProjList[[2]]
+  set.seed(61)
+  for (s in 1:9){
+    data_list[[i]] = simulation(a, 6, nRounds, rewardExp, taskThresh, alpha, beta, s, cp)
+    i = i + 1
+    
   }
 }
 data6pAll = do.call(rbind, data_list)
 
-
+levels(as.factor(data6pAll$startTasks))
 
 # Check Exponent and trheshold
 data_list = list()
@@ -487,7 +487,7 @@ simPlots = function(data,projects,sym=T){
       stat_summary(fun.y = "sum", geom = "bar") + 
       facet_wrap(~Simulation) +
       theme_minimal() +
-      labs(title = "Bar plot of the total sum of rewards per agent", subtitle = "Across 9 different simulations of 50 rounds each", y = "Sum of rewards")
+      labs(title = "Bar plot of the total sum of rewards per agent", subtitle = "Across 9 different simulations of 30 rounds each", y = "Sum of rewards")
     
     
     
@@ -495,7 +495,7 @@ simPlots = function(data,projects,sym=T){
       geom_point(aes(color = as.factor(Agent))) +
       facet_wrap(~Simulation) +
       theme_minimal() +
-      labs(title = "Agent 1 and 9 project choice", subtitle = "Across 9 different simulations of 50 rounds each", y = "Projects", color = "Agent")
+      labs(title = "Agent 1 and 9 project choice", subtitle = "Across 9 different simulations of 30 rounds each", y = "Projects", color = "Agent")
     
     
     plot10 = ggplot(data, aes(x = Round, y = as.factor(Agent))) +
@@ -503,6 +503,12 @@ simPlots = function(data,projects,sym=T){
       facet_wrap(~Simulation) +
       theme_minimal() +
       labs(title = "Project choice for all agents", subtitle = "Projects represented by color", y = "Actors", color = "Projects")
+    
+    plot11 = ggplot(data, aes(x = Round))+
+      geom_line(aes(y = Project3_Tasks+Project2_Tasks+Project1_Tasks)) +
+      facet_wrap(~Simulation) +
+      theme_minimal() +
+      labs(title = "Tasks left each round",subtitle = "All projects", y = "Tasks")
     
     } #End sym plots
     
@@ -599,7 +605,8 @@ plot10 = ggplot(data, aes(x = Round, y = as.factor(Agent))) +
         plot7,
         plot8,
         plot9,
-        plot10
+        plot10,
+        plot11
       )
     )
     
@@ -704,7 +711,7 @@ plot10 = ggplot(data, aes(x = Round, y = as.factor(Agent))) +
       stat_summary(fun.y = "sum", geom = "bar") + 
       facet_wrap(~Simulation) +
       theme_minimal() +
-      labs(title = "Bar plot of the total sum of rewards per agent", subtitle = "Across 9 different simulations of 50 rounds each", y = "Sum of rewards")
+      labs(title = "Bar plot of the total sum of rewards per agent", subtitle = "Across 9 different simulations of 30 rounds each", y = "Sum of rewards")
     
     
     #Project Choice plots
@@ -712,7 +719,7 @@ plot10 = ggplot(data, aes(x = Round, y = as.factor(Agent))) +
       geom_point(aes(color = as.factor(Agent))) +
       facet_wrap(~Simulation) +
       theme_minimal() +
-      labs(title = "Agent 1 and 9 project choice", subtitle = "Across 9 different simulations of 50 rounds each", y = "Projects", color = "Agent")
+      labs(title = "Agent 1 and 9 project choice", subtitle = "Across 9 different simulations of 30 rounds each", y = "Projects", color = "Agent")
     
     
     plot13 = ggplot(data, aes(x = Round, y = as.factor(Agent))) +
@@ -720,6 +727,12 @@ plot10 = ggplot(data, aes(x = Round, y = as.factor(Agent))) +
       facet_wrap(~Simulation) +
       theme_minimal() +
       labs(title = "Project choice for all agents", subtitle = "Projects represented by color", y = "Actors", color = "Projects")
+    
+    plot14 = ggplot(data, aes(x = Round))+
+      geom_line(aes(y = Project1_Tasks+Project2_Tasks+Project3_Tasks+Project4_Tasks+Project5_Tasks+Project6_Tasks)) +
+      facet_wrap(~Simulation) +
+      theme_minimal() +
+      labs(title = "Tasks left each round",subtitle = "All projects", y = "Tasks")
     
     } # End of symmetry plots
     
@@ -848,72 +861,58 @@ plot13 = ggplot(data, aes(x = Round, y = as.factor(Agent))) +
         plot10,
         plot11,
         plot12,
-        plot13
+        plot13,
+        plot14
       )
     )
   } #End of 6 projects
   
 }
 
-plots18a3p = simPlots(data18a3p,3)
-plots18a6p = simPlots(data18a6p,6)
-plots18a3p_asym = simPlots(asym_data18a3p,3, sym = F)
-plots18a6p_asym = simPlots(asym_data18a6p,6, sym = F)
+# Loops that saves plots in the right folders
+for (a in c(18,40,60,90,120)){
+  for (p in c(3,6)){
+    for (sym in c("asymmetric", "symmetric")){
+      path = paste0("plots/30_rounds/",a,"_agents/",p,"_projects/",sym,"/")
+      
+      if (p == 3){
+        plots = simPlots(subset(data3pAll, nAgents == a & symmetry == sym),3)
+        
+        ggsave(paste0(path,"Tasks-left_plot.png"), plots[[1]])
+        ggsave(paste0(path,"Tasks-done_plot.png"), plots[[2]])
+        ggsave(paste0(path,"Reward-given_agents_plot.png"), plots[[3]])
+        ggsave(paste0(path,"Rewards-given_summary_plot.png"), plots[[4]])
+        ggsave(paste0(path,"Agent1and9_project1_plot.png"), plots[[5]])
+        ggsave(paste0(path,"Agent1and9_project2_plot.png"), plots[[6]])
+        ggsave(paste0(path,"Agent1and9_project3_plot.png"), plots[[7]])
+        ggsave(paste0(path,"Sum-rewards_plot.png"), plots[[8]])
+        ggsave(paste0(path,"Agent1and9_choice_plot.png"), plots[[9]])
+        ggsave(paste0(path,"Project_choice_plot.png"), plots[[10]])
+        ggsave(paste0(path,"Tasks-left-total_plot.png"), plots[[11]])
+      }
+      
+      if (p == 6){
+        plots = simPlots(subset(data6pAll, nAgents == a & symmetry == sym),6)
+        
+        ggsave(paste0(path,"Tasks-left_plot.png"), plots[[1]])
+        ggsave(paste0(path,"Tasks-done_plot.png"), plots[[2]])
+        ggsave(paste0(path,"Reward-given_agents_plot.png"), plots[[3]])
+        ggsave(paste0(path,"Rewards-given_summary_plot.png"), plots[[4]])
+        ggsave(paste0(path,"Agent1and9_project1_plot.png"), plots[[5]])
+        ggsave(paste0(path,"Agent1and9_project2_plot.png"), plots[[6]])
+        ggsave(paste0(path,"Agent1and9_project3_plot.png"), plots[[7]])
+        ggsave(paste0(path,"Agent1and9_project4_plot.png"), plots[[8]])
+        ggsave(paste0(path,"Agent1and9_project5_plot.png"), plots[[9]])
+        ggsave(paste0(path,"Agent1and9_project6_plot.png"), plots[[10]])
+        ggsave(paste0(path,"Sum-rewards_plot.png"), plots[[11]])
+        ggsave(paste0(path,"Agent1and9_choice_plot.png"), plots[[12]])
+        ggsave(paste0(path,"Project_choice_plot.png"), plots[[13]])
+        ggsave(paste0(path,"Tasks-left-total_plot.png"), plots[[14]])
+      }
+    }
+  }
+}
 
-simPlots(subset(data3pAll, nAgents == 120 & symmetry == "symmetric"),3)[[3]]
-
-ggsave("plots/18_agents/3_projects/Symetric-projects-plots/Tasks-left_plot.png", plots18a3p[[1]])
-ggsave("plots/18_agents/3_projects/Symetric-projects-plots/Tasks-done_plot.png", plots18a3p[[2]])
-ggsave("plots/18_agents/3_projects/Symetric-projects-plots/Reward-given_agents_plot.png", plots18a3p[[3]])
-ggsave("plots/18_agents/3_projects/Symetric-projects-plots/Rewards-given_summary_plot.png", plots18a3p[[4]])
-ggsave("plots/18_agents/3_projects/Symetric-projects-plots/Agent1and9_project1_plot.png", plots18a3p[[5]])
-ggsave("plots/18_agents/3_projects/Symetric-projects-plots/Agent1and9_project2_plot.png", plots18a3p[[6]])
-ggsave("plots/18_agents/3_projects/Symetric-projects-plots/Agent1and9_project3_plot.png", plots18a3p[[7]])
-ggsave("plots/18_agents/3_projects/Symetric-projects-plots/Sum-rewards_plot.png", plots18a3p[[8]])
-ggsave("plots/18_agents/3_projects/Symetric-projects-plots/Agent1and9_choice_plot.png", plots18a3p[[9]])
-ggsave("plots/18_agents/3_projects/Symetric-projects-plots/Project_choice_plot.png", plots18a3p[[10]])
-
-ggsave("plots/18_agents/3_projects/Asymetric-projects-plots/Tasks-left_plot.png", plots18a3p_asym[[1]])
-ggsave("plots/18_agents/3_projects/Asymetric-projects-plots/Tasks-done_plot.png", plots18a3p_asym[[2]])
-ggsave("plots/18_agents/3_projects/Asymetric-projects-plots/Reward-given_agents_plot.png", plots18a3p_asym[[3]])
-ggsave("plots/18_agents/3_projects/Asymetric-projects-plots/Rewards-given_summary_plot.png", plots18a3p_asym[[4]])
-ggsave("plots/18_agents/3_projects/Asymetric-projects-plots/Agent1and9_project1_plot.png", plots18a3p_asym[[5]])
-ggsave("plots/18_agents/3_projects/Asymetric-projects-plots/Agent1and9_project2_plot.png", plots18a3p_asym[[6]])
-ggsave("plots/18_agents/3_projects/Asymetric-projects-plots/Agent1and9_project3_plot.png", plots18a3p_asym[[7]])
-ggsave("plots/18_agents/3_projects/Asymetric-projects-plots/Sum-rewards_plot.png", plots18a3p_asym[[8]])
-ggsave("plots/18_agents/3_projects/Asymetric-projects-plots/Agent1and9_choice_plot.png", plots18a3p_asym[[9]])
-ggsave("plots/18_agents/3_projects/Asymetric-projects-plots/Project_choice_plot.png", plots18a3p_asym[[10]])
-
-
-ggsave("plots/18_agents/6_projects/Symetric-projects-plots/Tasks-left_plot.png", plots18a6p[[1]])
-ggsave("plots/18_agents/6_projects/Symetric-projects-plots/Tasks-done_plot.png", plots18a6p[[2]])
-ggsave("plots/18_agents/6_projects/Symetric-projects-plots/Reward-given_agents_plot.png", plots18a6p[[3]])
-ggsave("plots/18_agents/6_projects/Symetric-projects-plots/Rewards-given_summary_plot.png", plots18a6p[[4]])
-ggsave("plots/18_agents/6_projects/Symetric-projects-plots/Agent1and9_project1_plot.png", plots18a6p[[5]])
-ggsave("plots/18_agents/6_projects/Symetric-projects-plots/Agent1and9_project2_plot.png", plots18a6p[[6]])
-ggsave("plots/18_agents/6_projects/Symetric-projects-plots/Agent1and9_project3_plot.png", plots18a6p[[7]])
-ggsave("plots/18_agents/6_projects/Symetric-projects-plots/Agent1and9_project4_plot.png", plots18a6p[[8]])
-ggsave("plots/18_agents/6_projects/Symetric-projects-plots/Agent1and9_project5_plot.png", plots18a6p[[9]])
-ggsave("plots/18_agents/6_projects/Symetric-projects-plots/Agent1and9_project6_plot.png", plots18a6p[[10]])
-ggsave("plots/18_agents/6_projects/Symetric-projects-plots/Sum-rewards_plot.png", plots18a6p[[11]])
-ggsave("plots/18_agents/6_projects/Symetric-projects-plots/Agent1and9_choice_plot.png", plots18a6p[[12]])
-ggsave("plots/18_agents/6_projects/Symetric-projects-plots/Project_choice_plot.png", plots18a6p[[13]])
-
-
-
-ggsave("plots/18_agents/6_projects/Asymetric-projects-plots/Tasks-left_plot.png", plots18a6p_asym[[1]])
-ggsave("plots/18_agents/6_projects/Asymetric-projects-plots/Tasks-done_plot.png", plots18a6p_asym[[2]])
-ggsave("plots/18_agents/6_projects/Asymetric-projects-plots/Reward-given_agents_plot.png", plots18a6p_asym[[3]])
-ggsave("plots/18_agents/6_projects/Asymetric-projects-plots/Rewards-given_summary_plot.png", plots18a6p_asym[[4]])
-ggsave("plots/18_agents/6_projects/Asymetric-projects-plots/Agent1and9_project1_plot.png", plots18a6p_asym[[5]])
-ggsave("plots/18_agents/6_projects/Asymetric-projects-plots/Agent1and9_project2_plot.png", plots18a6p_asym[[6]])
-ggsave("plots/18_agents/6_projects/Asymetric-projects-plots/Agent1and9_project3_plot.png", plots18a6p_asym[[7]])
-ggsave("plots/18_agents/6_projects/Asymetric-projects-plots/Agent1and9_project4_plot.png", plots18a6p_asym[[8]])
-ggsave("plots/18_agents/6_projects/Asymetric-projects-plots/Agent1and9_project5_plot.png", plots18a6p_asym[[9]])
-ggsave("plots/18_agents/6_projects/Asymetric-projects-plots/Agent1and9_project6_plot.png", plots18a6p_asym[[10]])
-ggsave("plots/18_agents/6_projects/Asymetric-projects-plots/Sum-rewards_plot.png", plots18a6p_asym[[11]])
-ggsave("plots/18_agents/6_projects/Asymetric-projects-plots/Agent1and9_choice_plot.png", plots18a6p_asym[[12]])
-ggsave("plots/18_agents/6_projects/Asymetric-projects-plots/Project_choice_plot.png", plots18a6p_asym[[13]])
 
 ###____###
 ########### Exponent and Threshold plots ######
@@ -1020,7 +1019,7 @@ for (e in c(0.3,0.4,0.5,0.6,0.7,0.8)){
       # rewardExp is the exponent defined outside the simulation.
       # (work[p]-maxOpt+1) is just the number of agents above maxOpt + 1 (to make the exponent work from the first agent above maxOpt)
       # the minus 1 in the end is add to shift it down to the intercept
-      rewards[p] = maxOpt + (work[p]-maxOpt+1)^e-1 
+      rewards[p] = maxOpt + (work[p]-maxOpt+1)*(2/12)
     }
   } 
   temp = data.frame("work" = work, "reward" = rewards, "exp" = e)
