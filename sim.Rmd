@@ -354,6 +354,7 @@ for (a in agents) {
   }
 }
 data3pAll = do.call(rbind, data_list)
+write.csv2(data3pAll, "data/data_3projects.csv")
 
 # loop through different numbers of agents and 6 projects
 data_list = list()
@@ -376,7 +377,7 @@ for (a in agents) {
 }
 data6pAll = do.call(rbind, data_list)
 
-levels(as.factor(data6pAll$startTasks))
+write.csv2(data6pAll, "data/data_6projects.csv")
 
 # Check Exponent and trheshold
 data_list = list()
@@ -1060,4 +1061,12 @@ ggplot(thresh_data, aes(x = projects, y = reward)) +
   theme_minimal() +
   facet_wrap(~thresh) +
   labs(title = "How much a reward of 1 is decreased as a function of how many tasks are left in a project", subtitle = "A procentage threshold is defined. If the percentage of tasks left are below. \nThen the threshold a modifier is defined as the percentage left devided by the threshold. \nThen this modifier is multiplied by the threshold. \n6 plots showing different thresholds for a total amount of 300 tasks", y = "Reward", x = "Tasks left")
+
+```
+
+```{r}
+write.csv2(subset(data3pAll, Round == 30 & Agent == 1)[,c(1,9:11,18,21)], "data/tasks_left_round30_3projects.csv")
+
+write.csv2(subset(data6pAll, Round == 30 & Agent == 1)[,c(1,12:17,30,33)], "data/tasks_left_round30_6projects.csv")
+```
 
